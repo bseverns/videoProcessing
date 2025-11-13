@@ -11,30 +11,60 @@ boolean isPlaying = false;
 Movie mov;
 
 float rnd;
-String stringNum;
+String stringNum = "00";
 
 void setup() {
+  size(640, 480);
   startcount = true;
   startSECOND=second();
   startMINUTE=minute();
   startTOTAL = startMINUTE*60 + startSECOND;
-  target_m = int(random(0, 8));
-  target_s = int(random(0, 59));
+  setNextTarget();
 
-  mov = new Movie(this, stringNum+".mov");
-  mov.play();
+  playClip(stringNum);
 }
 
 void draw() {
-
-  if (target_m == cm) {
-    if (target_s == cs) {
-      stringNum = nf(int(random(100)));
-
-      image(mov, 0, 0, width, height);
-    }
-  }
+  background(0);
   calculate();
+
+  if (shouldTrigger()) {
+    triggerNextClip();
+  }
+
+  if (mov != null && isPlaying) {
+    image(mov, 0, 0, width, height);
+  }
+}
+
+boolean shouldTrigger() {
+  return startcount && (cm > target_m || (cm == target_m && cs >= target_s));
+}
+
+void triggerNextClip() {
+  stringNum = nf(int(random(100)), 2);
+  playClip(stringNum);
+  setNextTarget();
+}
+
+void playClip(String clipId) {
+  if (mov != null) {
+    mov.stop();
+  }
+  mov = new Movie(this, clipId + ".mov");
+  mov.play();
+  isPlaying = true;
+}
+
+void setNextTarget() {
+  int deltaSeconds = int(random(1, 8 * 60 + 1));
+  int totalSeconds = (cm * 60 + cs) + deltaSeconds;
+  target_m = totalSeconds / 60;
+  target_s = totalSeconds % 60;
+}
+
+void movieEvent(Movie m) {
+  m.read();
 }
 
 void calculate()
