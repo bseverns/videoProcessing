@@ -9,6 +9,7 @@ PImage video;
 ReceiverThread thread;
 String bindAddress = "0.0.0.0";
 int listenPort = 9100;
+ReceiverStats stats = new ReceiverStats();
 
 void setup() {
   size(400,300);
@@ -17,9 +18,12 @@ void setup() {
   thread.start();
 }
 
- void draw() {
+void draw() {
   if (thread != null && thread.available()) {
     video = thread.getImage();
+  }
+  if (thread != null) {
+    stats = thread.snapshot();
   }
 
   // Draw the image
@@ -66,14 +70,28 @@ void promptForBind() {
 
 void drawOverlay() {
   pushStyle();
-  fill(0, 180);
+  fill(0, 200);
   noStroke();
-  rect(0, height - 60, width, 60);
+  rect(0, height - 100, width, 100);
   fill(255);
   textAlign(LEFT, TOP);
-  text("Threaded rx on " + bindAddress + ":" + listenPort, 10, height - 55);
-  text("Press [I] to bind, [P] to pick a port", 10, height - 35);
-  text("Thread drops zombie frames instead of freezing", 10, height - 15);
+  float dropPct = (stats.framesCompleted + stats.framesDropped) == 0 ? 0 : (100.0 * stats.framesDropped) / (stats.framesCompleted + stats.framesDropped);
+  int idleMs = stats.lastFrameTimestampMs == 0 ? (int)millis() : (int)(System.currentTimeMillis() - stats.lastFrameTimestampMs);
+  String progressLine = (stats.buildingFrameId != -1 && stats.currentExpectedChunks > 0)
+    ? "Building frame " + stats.buildingFrameId + ": " + stats.currentReceivedChunks + "/" + stats.currentExpectedChunks + " chunks"
+    : "Idle (" + idleMs + " ms since last frame)";
+  String lastFrameLine = (stats.framesCompleted > 0)
+    ? "Last frame " + stats.lastFrameId + " took " + nf(stats.lastAssemblyMs, 0, 1) + " ms across " + stats.lastCompletedChunks + " chunks"
+    : "Waiting for first complete frame";
+  text("Threaded rx on " + bindAddress + ":" + listenPort, 10, height - 95);
+  text("Frames ok " + stats.framesCompleted + " | dropped " + stats.framesDropped + " (" + nf(dropPct, 0, 1) + "%)", 10, height - 75);
+  text(lastFrameLine, 10, height - 55);
+  text(progressLine, 10, height - 35);
+  String hint = "Press [I] to bind, [P] to pick a port";
+  if (stats.lastDropReason != null && stats.lastDropReason.length() > 0) {
+    hint += " | Last drop: " + stats.lastDropReason;
+  }
+  text(hint, 10, height - 15);
   popStyle();
 }
 
