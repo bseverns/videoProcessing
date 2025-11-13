@@ -38,7 +38,7 @@ Each folder holds a Processing sketch that targets a specific idea: ASCII camera
 | `vidControl` | Webcam motion detector that fires OSC messages describing how rowdy the scene is. | `processing.video`, `oscP5`, `netP5` | Sends OSC bundles (`none`, `tiny`, `some`, `lots`) to `127.0.0.1:12000`. Great companion to `vidPlay`. |
 | `vidPlay` | OSC-controlled movie playback that responds to the vibe levels from `vidControl`. | `processing.video`, `oscP5`, `netP5` | Supply the referenced video file (currently `ROBOTECH_REMASTERED_VOL_1_? copy.m4v`) in `data/`. Adjust the filename to match your actual asset. |
 | `videoFilters` | Keyboard-driven webcam filters for mirroring, sepia, posterization, and threshold effects. | `processing.video` | Use keys `v`, `m`, `s`, `f`, `y` to switch looks. Any other key resets to the raw feed. |
-| `videoRNDM` | Prototype for scheduling surprise video clips based on elapsed time. | `processing.video` | Set `stringNum` to a valid clip name before running—right now the sketch will crash without it. A teachable moment about initialization. |
+| `videoRNDM` | Prototype for scheduling surprise video clips based on elapsed time. | `processing.video` | Ships with a default clip ID (`00.mov`), auto-schedules new triggers, and swaps to fresh movies as the timer advances. Drop your numbered clips in `data/`. |
 
 ## Media file expectations
 | Sketch | Current filename(s) referenced in code | What to do |
@@ -46,7 +46,7 @@ Each folder holds a Processing sketch that targets a specific idea: ASCII camera
 | `bg_subMOV`, `bg_subMOV2` | `Untitled_1.mov` | Replace with your own clip but keep the filename or update the code. Drop it inside each sketch’s `data/` folder. |
 | `vidPlay` | `ROBOTECH_REMASTERED_VOL_1_? copy.m4v` | Rename your target file to something sane and edit the `new Movie` call to match. |
 | `sketch_190517a` | `0.mov` … `9.mov` (driven by `movTOTAL`) | Provide numbered clips or tweak the selector logic. |
-| `videoRNDM` | `stringNum + ".mov"` (uninitialized) | Set `stringNum` manually before `setup()` or refactor the sketch as described in its README. |
+| `videoRNDM` | `stringNum + ".mov"` (starts at `00.mov`) | Provide zero-padded clips (e.g. `00.mov`, `01.mov`). The sketch randomizes the next filename each time a trigger fires. |
 | `compositeVideoSim` | Image file defined by `filename`/`fileext` | Drop an image into the sketch folder and update the variables. |
 
 ## How to contribute or extend

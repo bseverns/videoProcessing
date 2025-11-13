@@ -9,17 +9,17 @@ Prototype timer that randomly drops surprise video clips once the clock hits a t
 
 ## Ingredients
 - **Libraries:** `processing.video`.
-- **Media:** Provide a set of numbered clips (`00.mov`, `01.mov`, etc.) and set `stringNum` to a valid base name before `setup()` runs.
+- **Media:** Provide a set of numbered clips (`00.mov`, `01.mov`, etc.) inside a `data/` folder. The sketch bootstraps with clip `00.mov` and then chases fresh surprises.
 
 ## Run it
-1. Decide which clip should play first and set `stringNum = "00";` (for example) near the top of the sketch. Without this, `new Movie(this, stringNum+".mov")` will throw a null pointer.
-2. Drop the clips into the `data/` folder. The sketch expects zero-padded filenames when you call `nf(int(random(100)))`.
-3. Run the sketch. It captures the start time, picks `target_m` and `target_s`, and waits until the clock matches. Once triggered, it loads a new random clip and displays it.
+1. Drop the clips into the `data/` folder. The sketch expects zero-padded filenames because the randomizer uses `nf(int(random(100)), 2)`.
+2. Run the sketch. `setup()` locks the window to `size(640, 480)`, grabs the current time, primes the first playback, and schedules a future trigger.
+3. When the clock blows past that trigger, the sketch picks another clip name, spins up a new `Movie`, and queues another timestamp so the party keeps rolling.
 
 ## How it works
 - `startTOTAL` and `stopTOTAL` convert minutes/seconds into a single second count so you can measure differences easily.
 - `calculate()` updates the current minute (`cm`) and second (`cs`) offset from the start.
-- When the current offset matches the random target, the sketch chooses a new random filename with `nf(int(random(100)))` and plays it. This is deliberately sparse so you can expand the scheduler logic.
+- When the current offset passes the random target, the sketch chooses a new random filename with `nf(int(random(100)), 2)`, swaps to a fresh `Movie`, and schedules the next surprise.
 
 ## Remix it
 - Replace the time-based trigger with keyboard input, OSC messages, or sensor data.
