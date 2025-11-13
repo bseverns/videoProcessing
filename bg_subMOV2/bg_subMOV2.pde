@@ -12,19 +12,24 @@ OpenCV opencv;
 void setup() {
   size(720, 480);
   mov1 = new Movie(this, "Untitled_1.mov");
-  
+
   video = new Capture(this, 720, 480);
   opencv = new OpenCV(this, 720, 480);
-  
+
   opencv.startBackgroundSubtraction(5, 3, 0.5);
-  
+
+  video.start();
+
   mov1.loop();
   mov1.play();
 }
 
 void draw() {
-  image(mov1, 0, 0);  
-  opencv.loadImage(video);
+  image(mov1, 0, 0);
+  if (video.available()) {
+    video.read();
+    opencv.loadImage(video);
+  }
   
   //opencv.updateBackground();
   
@@ -34,11 +39,16 @@ void draw() {
   noFill();
   stroke(255, 0, 0);
   strokeWeight(3);
-//  for (Contour contour : opencv.findContours()) {
-//    contour.draw();
-//  }
+  for (Contour contour : opencv.findContours()) {
+    contour.draw();
+  }
 }
 
 void movieEvent(Movie m) {
   m.read();
+}
+
+void captureEvent(Capture c) {
+  c.read();
+  opencv.loadImage(c);
 }
