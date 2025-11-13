@@ -7,7 +7,7 @@ import netP5.*;
 //video
 Movie mov;
 float newSpeed = 0;
-float oldSpeed;
+float motionAmount = 0;
 
 //OSC
 OscP5 oscP5;
@@ -34,37 +34,23 @@ void movieEvent(Movie movie) {
 void draw() {
   mov.speed(newSpeed);
   image(mov, 0, 0);
-  oldSpeed = newSpeed;
+
+  fill(0, 180);
+  noStroke();
+  rect(0, height - 40, width, 40);
+  fill(255);
+  textAlign(LEFT, CENTER);
+  textSize(16);
+  text("motion: " + nf(motionAmount, 1, 3) + " speed: " + nf(newSpeed, 1, 3), 12, height - 20);
 }
 
 void oscEvent(OscMessage theOscMessage) {
-
-  if (theOscMessage.checkAddrPattern("none")==true) {
-    println("none");
-    int msgVal = 1;
-    if (msgVal == 1) {
-      newSpeed = -0.5;
-    }
-  } else if (theOscMessage.checkAddrPattern ("tiny")==true) {
-    println("tine");
-    int msgVal = 2;
-    if (msgVal == 2) {
-      newSpeed = 0.25;
-    }
-  } else if (theOscMessage.checkAddrPattern ("some")==true) {
-    println("some");
-    int msgVal = 3;
-    if (msgVal == 3) {
-      newSpeed = 1;
-    }
-  } else if (theOscMessage.checkAddrPattern ("lots")==true) {
-    println("lots");
-    int msgVal = 4;
-    if (msgVal == 4) {
-      newSpeed = 1.85;
-    }
-  } else {
-    println("nothingnew");
-    newSpeed = oldSpeed;
+  if (theOscMessage.checkAddrPattern("/motion") == true && theOscMessage.arguments().length > 0) {
+    motionAmount = theOscMessage.get(0).floatValue();
+    motionAmount = constrain(motionAmount, 0.0, 1.0);
+    // Ease the normalized motion value to favor slow changes before mapping to playback speed.
+    float eased = pow(motionAmount, 1.5);
+    newSpeed = lerp(-0.5, 2.0, eased);
+    println("motion " + nf(motionAmount, 1, 3) + " -> speed " + nf(newSpeed, 1, 3));
   }
 }
