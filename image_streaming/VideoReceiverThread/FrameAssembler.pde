@@ -11,7 +11,10 @@ class FrameAssembler {
   private boolean[] received = new boolean[0];
   private int receivedCount = 0;
   private int lastCompletedFrameId = -1;
+  private int lastCompletedChunkCount = 0;
   private long lastUpdateMs = 0;
+  private long frameStartMs = 0;
+  private long lastAssemblyDurationMs = 0;
 
   boolean consume(byte[] packet, int packetLength) {
     if (packetLength < HEADER_SIZE) {
@@ -88,6 +91,8 @@ class FrameAssembler {
     }
 
     lastCompletedFrameId = currentFrameId;
+    lastCompletedChunkCount = chunkCount;
+    lastAssemblyDurationMs = System.currentTimeMillis() - frameStartMs;
     reset();
     return frame;
   }
@@ -114,6 +119,36 @@ class FrameAssembler {
     chunkLengths = new int[chunkCount];
     received = new boolean[chunkCount];
     receivedCount = 0;
-    lastUpdateMs = System.currentTimeMillis();
+    long now = System.currentTimeMillis();
+    lastUpdateMs = now;
+    frameStartMs = now;
+  }
+
+  int getCurrentFrameId() {
+    return currentFrameId;
+  }
+
+  int getExpectedChunkCount() {
+    return chunkCount;
+  }
+
+  int getReceivedChunkCount() {
+    return receivedCount;
+  }
+
+  int getLastCompletedFrameId() {
+    return lastCompletedFrameId;
+  }
+
+  int getLastCompletedChunkCount() {
+    return lastCompletedChunkCount;
+  }
+
+  long getLastAssemblyDurationMs() {
+    return lastAssemblyDurationMs;
+  }
+
+  long getLastUpdateMs() {
+    return lastUpdateMs;
   }
 }

@@ -27,6 +27,18 @@ class ReceiverThread extends Thread {
   PImage img;
   FrameAssembler assembler = new FrameAssembler();
 
+  // Telemetry shared with the sketch
+  int framesCompleted = 0;
+  int framesDropped = 0;
+  int lastFrameId = -1;
+  int buildingFrameId = -1;
+  int currentExpectedChunks = 0;
+  int currentReceivedChunks = 0;
+  int lastCompletedChunks = 0;
+  float lastAssemblyMs = 0;
+  long lastFrameTimestampMs = 0;
+  String lastDropReason = "";
+
   ReceiverThread (int w, int h, String bind, int listenPort) {
     img = createImage(w,h,RGB);
     running = false;
@@ -88,16 +100,45 @@ class ReceiverThread extends Thread {
       }
       try {
         socket.receive(packet);
-        if (assembler.consume(packet.getData(), packet.getLength())) {
+        boolean complete = assembler.consume(packet.getData(), packet.getLength());
+        synchronized(this) {
+          currentExpectedChunks = assembler.getExpectedChunkCount();
+          currentReceivedChunks = assembler.getReceivedChunkCount();
+          buildingFrameId = assembler.getCurrentFrameId();
+        }
+        if (complete) {
           byte[] frameBytes = assembler.buildFrame();
           if (frameBytes != null) {
             applyFrame(frameBytes);
+            synchronized(this) {
+              framesCompleted++;
+              lastFrameId = assembler.getLastCompletedFrameId();
+              lastCompletedChunks = assembler.getLastCompletedChunkCount();
+              lastAssemblyMs = assembler.getLastAssemblyDurationMs();
+              lastFrameTimestampMs = System.currentTimeMillis();
+              buildingFrameId = -1;
+              currentExpectedChunks = 0;
+              currentReceivedChunks = 0;
+              lastDropReason = "";
+            }
             available = true;
           }
         }
       }
       catch (SocketTimeoutException timeout) {
         if (assembler.hasExpired(250)) {
+          int abandonedFrame = assembler.getCurrentFrameId();
+          String reason = "Timed out waiting for frame";
+          if (abandonedFrame != -1) {
+            reason += " " + abandonedFrame;
+          }
+          synchronized(this) {
+            framesDropped++;
+            lastDropReason = reason;
+            buildingFrameId = -1;
+            currentExpectedChunks = 0;
+            currentReceivedChunks = 0;
+          }
           assembler.reset();
         }
       }
@@ -148,4 +189,34 @@ class ReceiverThread extends Thread {
     // In case the thread is waiting. . .
     interrupt();
   }
+
+  ReceiverStats snapshot() {
+    synchronized(this) {
+      ReceiverStats stats = new ReceiverStats();
+      stats.framesCompleted = framesCompleted;
+      stats.framesDropped = framesDropped;
+      stats.lastFrameId = lastFrameId;
+      stats.buildingFrameId = buildingFrameId;
+      stats.currentExpectedChunks = currentExpectedChunks;
+      stats.currentReceivedChunks = currentReceivedChunks;
+      stats.lastCompletedChunks = lastCompletedChunks;
+      stats.lastAssemblyMs = lastAssemblyMs;
+      stats.lastFrameTimestampMs = lastFrameTimestampMs;
+      stats.lastDropReason = lastDropReason;
+      return stats;
+    }
+  }
+}
+
+class ReceiverStats {
+  int framesCompleted;
+  int framesDropped;
+  int lastFrameId;
+  int buildingFrameId;
+  int currentExpectedChunks;
+  int currentReceivedChunks;
+  int lastCompletedChunks;
+  float lastAssemblyMs;
+  long lastFrameTimestampMs;
+  String lastDropReason;
 }

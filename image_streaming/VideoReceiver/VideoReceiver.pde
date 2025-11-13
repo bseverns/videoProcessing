@@ -15,6 +15,18 @@ FrameAssembler assembler = new FrameAssembler();
 
 PImage video;
 
+// Telemetry
+int framesCompleted = 0;
+int framesDropped = 0;
+int lastFrameId = -1;
+int buildingFrameId = -1;
+int currentExpectedChunks = 0;
+int currentReceivedChunks = 0;
+int lastCompletedChunks = 0;
+float lastAssemblyMs = 0;
+long lastFrameTimestampMs = 0;
+String lastDropReason = "";
+
 void setup() {
   size(400,300);
   openSocket();
@@ -92,10 +104,24 @@ void checkForImage() {
   while (true) {
     try {
       ds.receive(packet);
-      if (assembler.consume(packet.getData(), packet.getLength())) {
+      boolean complete = assembler.consume(packet.getData(), packet.getLength());
+      currentExpectedChunks = assembler.getExpectedChunkCount();
+      currentReceivedChunks = assembler.getReceivedChunkCount();
+      buildingFrameId = assembler.getCurrentFrameId();
+
+      if (complete) {
         byte[] frameBytes = assembler.buildFrame();
         if (frameBytes != null && applyFrame(frameBytes)) {
           updated = true;
+          framesCompleted++;
+          lastFrameId = assembler.getLastCompletedFrameId();
+          lastCompletedChunks = assembler.getLastCompletedChunkCount();
+          lastAssemblyMs = assembler.getLastAssemblyDurationMs();
+          lastFrameTimestampMs = System.currentTimeMillis();
+          buildingFrameId = -1;
+          currentExpectedChunks = 0;
+          currentReceivedChunks = 0;
+          lastDropReason = "";
         }
       }
     } catch (SocketTimeoutException timeout) {
@@ -109,7 +135,16 @@ void checkForImage() {
   }
 
   if (!updated && assembler.hasExpired(250)) {
+    int abandonedFrame = assembler.getCurrentFrameId();
+    String reason = "Timed out waiting for frame";
+    if (abandonedFrame != -1) {
+      reason += " " + abandonedFrame;
+    }
+    noteFrameDrop(reason);
     assembler.reset();
+    buildingFrameId = -1;
+    currentExpectedChunks = 0;
+    currentReceivedChunks = 0;
   }
 }
 
@@ -132,14 +167,28 @@ boolean applyFrame(byte[] frameBytes) {
 
 void drawOverlay() {
   pushStyle();
-  fill(0, 180);
+  fill(0, 200);
   noStroke();
-  rect(0, height - 60, width, 60);
+  rect(0, height - 100, width, 100);
   fill(255);
   textAlign(LEFT, TOP);
-  text("Listening on " + bindAddress + ":" + port, 10, height - 55);
-  text("Press [I] to set bind address, [P] to set port", 10, height - 35);
-  text("Receiver stitches frame chunks together or bails fast", 10, height - 15);
+  float dropPct = (framesCompleted + framesDropped) == 0 ? 0 : (100.0 * framesDropped) / (framesCompleted + framesDropped);
+  int idleMs = lastFrameTimestampMs == 0 ? (int)millis() : (int)(System.currentTimeMillis() - lastFrameTimestampMs);
+  String progressLine = (buildingFrameId != -1 && currentExpectedChunks > 0)
+    ? "Building frame " + buildingFrameId + ": " + currentReceivedChunks + "/" + currentExpectedChunks + " chunks"
+    : "Idle (" + idleMs + " ms since last frame)";
+  String lastFrameLine = (framesCompleted > 0)
+    ? "Last frame " + lastFrameId + " took " + nf(lastAssemblyMs, 0, 1) + " ms across " + lastCompletedChunks + " chunks"
+    : "Waiting for first complete frame";
+  text("Listening on " + bindAddress + ":" + port, 10, height - 95);
+  text("Frames ok " + framesCompleted + " | dropped " + framesDropped + " (" + nf(dropPct, 0, 1) + "%)", 10, height - 75);
+  text(lastFrameLine, 10, height - 55);
+  text(progressLine, 10, height - 35);
+  String hint = "Press [I] to bind, [P] to set port";
+  if (lastDropReason != null && lastDropReason.length() > 0) {
+    hint += " | Last drop: " + lastDropReason;
+  }
+  text(hint, 10, height - 15);
   popStyle();
 }
 
@@ -148,4 +197,9 @@ void dispose() {
     ds.close();
     ds = null;
   }
+}
+
+void noteFrameDrop(String reason) {
+  framesDropped++;
+  lastDropReason = reason;
 }

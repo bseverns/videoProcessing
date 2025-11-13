@@ -16,12 +16,12 @@ Motion-driven OSC controller: watch the webcam for movement and shout OSC messag
 1. Install `oscP5` and `netP5` via the Contribution Manager (they ship together).
 2. Open `vidControl.pde` in Processing, confirm the Video library is available, and place a receiver sketch/app on port `12000`.
 3. Hit Run. The webcam feed displays in the window to help with framing.
-4. Wave around. The sketch maps `presenceSum` (sum of RGB differences across the frame) into four ranges and sends OSC messages labelled `none`, `tiny`, `some`, or `lots`. It also spits out a normalized `/motion` float in the payload so downstream tools can dance along a continuous 0–1 curve—check the HUD overlay in `vidPlay` to watch that value breathe.
+4. Wave around. The sketch normalizes `presenceSum` (sum of RGB differences across the frame) into a single `/motion` float between 0 and 1 at roughly 4 fps. Pair it with `vidPlay` to see the value and mapped playback speed in that sketch’s HUD.
 
 ## How it works
 - Each frame, `presenceSum` accumulates the absolute difference between the current frame and the last stored `backgroundPixels`. Because the code updates `backgroundPixels[i] = currColor;` each iteration, it effectively measures per-frame change rather than difference from a static background.
-- The `map()` call squeezes `presenceSum` into 0–20. That value selects which OSC message to fire; the payload is a simple integer (`1`–`4`) *and* the same measurement normalized to a 0–1 float published under `/motion`.
-- `frameRate(4);` throttles processing to 4 fps so receivers aren’t flooded; you still get a live-but-chill motion feed.
+- `presenceSum` is clamped against the theoretical max difference (`numPixels * 255`) so the `/motion` float stays inside 0–1 even if you blast the camera with light.
+- `frameRate(4);` throttles processing so receivers aren’t flooded; you still get a live-but-chill motion feed with plenty of time to react on stage.
 
 ## Remix it
 - Capture a clean background image by pressing a key, then compare future frames against that snapshot for more stable results.
