@@ -16,14 +16,14 @@ An OSC-responsive movie player: it listens for vibe levels from `vidControl` and
 1. Place your desired video file into the sketch’s `data/` folder and update the filename in `setup()` if needed.
 2. Open `vidPlay.pde` in Processing with the Video and OSC libraries installed.
 3. Run the sketch. By default it loops the movie.
-4. Trigger OSC messages from `vidControl` (or another source) using address patterns `none`, `tiny`, `some`, and `lots`. Each message maps to a playback speed: reverse, slow, normal, and hype mode (1.85x).
+4. Trigger `/motion` floats from `vidControl` (or another source). The HUD strip at the bottom prints the live normalized value and the resulting speed so you can sanity-check the stream in real time.
 
 ## How it works
-- `oscEvent(OscMessage theOscMessage)` uses `checkAddrPattern` to compare the incoming message with each expected route. When matched, it updates `newSpeed`.
-- The `draw()` loop applies `mov.speed(newSpeed);` each frame and caches `oldSpeed` so unknown messages don’t crash playback—they simply reuse the previous speed.
-- There’s no payload validation yet, so this is a good platform for adding safety checks or supporting continuous float parameters.
+- `oscEvent(OscMessage theOscMessage)` now looks for `/motion`, clamps the float payload into 0–1, eases it with `pow(value, 1.5)`, then maps that eased value through `lerp(-0.5, 2.0, eased)` so chill moments coast in reverse and big spikes rocket forward.
+- The `draw()` loop applies `mov.speed(newSpeed);` each frame and paints a semi-transparent HUD so you can debug what OSC is doing without tailing the console.
+- There’s no payload validation yet beyond the clamp, so this is a good platform for adding safety checks or supporting additional continuous parameters.
 
 ## Remix it
-- Map OSC floats (`/speed`, `/scrub`) instead of discrete address patterns to gain finer control.
-- Display on-screen feedback for the current speed and message source.
+- Fork the easing curve: try `pow(value, 0.8)` for punchier attacks or cascade a low-pass filter before mapping speed.
+- Expand the HUD with color ramps, meters, or debug text so performers can read the room from across the stage.
 - Sync audio playback or route simultaneous OSC triggers to DMX/MIDI for multimedia shows.
