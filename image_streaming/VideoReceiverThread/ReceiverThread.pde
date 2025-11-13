@@ -3,30 +3,62 @@
 
 // A Thread using receiving UDP
 
+import java.net.*;
+import java.io.*;
+import java.awt.image.*;
+import javax.imageio.*;
+import java.nio.*;
+
 class ReceiverThread extends Thread {
 
+  static final int MAX_PACKET_SIZE = 60000;
+
   // Port we are receiving.
-  int port = 9100; 
-  DatagramSocket ds; 
-  // A byte array to read into (max size of 65536, could be smaller)
-  byte[] buffer = new byte[65536]; 
+  int port = 9100;
+  String bindAddress = "0.0.0.0";
+  DatagramSocket ds;
+  // A byte array to read into
+  byte[] buffer = new byte[MAX_PACKET_SIZE];
 
   boolean running;    // Is the thread running?  Yes or no?
-  boolean available;  // Are there new tweets available?
+  boolean available;  // Is a fresh frame available?
 
-  // Start with something 
+  // Start with something
   PImage img;
+  FrameAssembler assembler = new FrameAssembler();
 
-  ReceiverThread (int w, int h) {
+  ReceiverThread (int w, int h, String bind, int listenPort) {
     img = createImage(w,h,RGB);
     running = false;
     available = true; // We start with "loading . . " being available
+    bindAddress = bind;
+    port = listenPort;
+    configureSocket();
+  }
 
+  synchronized void configureSocket() {
+    if (ds != null) {
+      ds.close();
+      ds = null;
+    }
     try {
-      ds = new DatagramSocket(port);
+      if (bindAddress.equals("0.0.0.0")) {
+        ds = new DatagramSocket(port);
+      } else {
+        ds = new DatagramSocket(new InetSocketAddress(bindAddress, port));
+      }
+      ds.setSoTimeout(50);
+      System.out.println("[Thread] Listening on " + bindAddress + ":" + port);
     } catch (SocketException e) {
+      System.err.println("[Thread] Failed to bind to " + bindAddress + ":" + port);
       e.printStackTrace();
     }
+  }
+
+  synchronized void updateEndpoint(String bind, int listenPort) {
+    bindAddress = bind;
+    port = listenPort;
+    configureSocket();
   }
 
   PImage getImage() {
@@ -47,50 +79,73 @@ class ReceiverThread extends Thread {
 
   // We must implement run, this gets triggered by start()
   void run () {
+    DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
     while (running) {
-      checkForImage();
-      // New data is available!
-      available = true;
+      DatagramSocket socket = getSocket();
+      if (socket == null) {
+        delay(10);
+        continue;
+      }
+      try {
+        socket.receive(packet);
+        if (assembler.consume(packet.getData(), packet.getLength())) {
+          byte[] frameBytes = assembler.buildFrame();
+          if (frameBytes != null) {
+            applyFrame(frameBytes);
+            available = true;
+          }
+        }
+      }
+      catch (SocketTimeoutException timeout) {
+        if (assembler.hasExpired(250)) {
+          assembler.reset();
+        }
+      }
+      catch (SocketException se) {
+        if (!running) {
+          break;
+        }
+      }
+      catch (IOException e) {
+        e.printStackTrace();
+      }
+      finally {
+        packet.setLength(buffer.length);
+      }
     }
   }
 
-  void checkForImage() {
-    DatagramPacket p = new DatagramPacket(buffer, buffer.length); 
+  synchronized DatagramSocket getSocket() {
+    return ds;
+  }
+
+  void applyFrame(byte[] frameBytes) {
+    ByteArrayInputStream bais = new ByteArrayInputStream(frameBytes);
     try {
-      ds.receive(p);
-    } 
-    catch (IOException e) {
-      e.printStackTrace();
-    } 
-    byte[] data = p.getData();
-
-    //println("Received datagram with " + data.length + " bytes." );
-
-    // Read incoming data into a ByteArrayInputStream
-    ByteArrayInputStream bais = new ByteArrayInputStream( data );
-
-    // We need to unpack JPG and put it in the PImage img
-    img.loadPixels();
-    try {
-      // Make a BufferedImage out of the incoming bytes
       BufferedImage bimg = ImageIO.read(bais);
-      // Put the pixels into the PImage
+      if (bimg == null) {
+        return;
+      }
+      img.loadPixels();
       bimg.getRGB(0, 0, img.width, img.height, img.pixels, 0, img.width);
-    } 
+      img.updatePixels();
+    }
     catch (Exception e) {
       e.printStackTrace();
     }
-    // Update the PImage pixels
-    img.updatePixels();
   }
 
 
   // Our method that quits the thread
   void quit() {
-    System.out.println("Quitting."); 
+    System.out.println("Quitting.");
     running = false;  // Setting running to false ends the loop in run()
+    assembler.reset();
+    DatagramSocket socket = getSocket();
+    if (socket != null) {
+      socket.close();
+    }
     // In case the thread is waiting. . .
     interrupt();
   }
 }
-
