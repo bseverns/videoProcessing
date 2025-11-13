@@ -9,6 +9,7 @@ int[] backgroundPixels;
 int presenceSum;
 Capture video;
 Movie mov1;
+boolean liveBackground = true;
 
 void setup() {
   size(640, 480);
@@ -54,7 +55,9 @@ void draw() {
       pixels[i] = color(diffR, diffG, diffB);
       // The following line does the same thing much faster, but is more technical
       //pixels[i] = 0xFF000000 | (diffR << 16) | (diffG << 8) | diffB;
-      backgroundPixels[i] = currColor;
+      if (liveBackground) {
+        backgroundPixels[i] = currColor;
+      }
     }
    if (presenceSum > 0) {
       updatePixels(); // Notify that the pixels[] array has changed
@@ -62,10 +65,31 @@ void draw() {
   }
 
   image(mov1, 0, 0);
-  float newSpeed = map(presenceSum, 1000000, 99999999, -0.5, 2.5); 
+  float newSpeed = map(presenceSum, 1000000, 99999999, -0.5, 2.5);
   mov1.speed(newSpeed);
+
+  String modeLabel = liveBackground ? "MODE: LIVE BACKGROUND" : "MODE: STATIC BACKGROUND";
+  fill(255);
+  textSize(16);
+  text(modeLabel, 10, height - 20);
+  if (!liveBackground) {
+    text("press space to recapture", 10, height - 40);
+  } else {
+    text("press space to freeze", 10, height - 40);
+  }
 }
 
 void movieEvent(Movie mov1) {
   mov1.read();
+}
+
+void keyPressed() {
+  if (key == ' ') {
+    if (video != null && video.pixels != null && video.pixels.length == backgroundPixels.length) {
+      arrayCopy(video.pixels, backgroundPixels);
+      liveBackground = false;
+    }
+  } else if (key == 'l' || key == 'L') {
+    liveBackground = !liveBackground;
+  }
 }
