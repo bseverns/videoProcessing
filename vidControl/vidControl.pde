@@ -9,6 +9,7 @@ Capture video;
 int numPixels;
 int[] backgroundPixels;
 float presenceSum = 0.0;
+float normalizedMotion = 0.0;
 
 //OSC
 OscP5 oscP5;
@@ -17,8 +18,6 @@ NetAddress myRemoteLocation;
 int myListeningPort = 32000;
 int myBroadcastPort = 12000;
 String displayIP = "127.0.0.1";//this computer
-
-float playStatus = 0.0;
 
 void setup() {
   size(720, 480);
@@ -38,8 +37,6 @@ void setup() {
   oscP5 = new OscP5(this, 32000);
   println("osc");
   myRemoteLocation = new NetAddress("127.0.0.1", 12000);
-  playStatus = 0.0;
-
   frameRate(4);
 }
 
@@ -73,36 +70,16 @@ void draw() {
 
       presenceSum += (diffR + diffG + diffB);
     }
-   
-    //////////////////////HERE/////////////////////////
-    playStatus = map(presenceSum, 0, 99999999, 0, 20);
-    println(playStatus);
-    /*figure out the mapped value ranges for things*/
 
-    if (playStatus <= 10.5) {
-      OscMessage myMessage = new OscMessage("none");
-      myMessage.add(1);
-      //add display iP to oscp5.send msg
-      oscP5.send(myMessage, myRemoteLocation);
-      println("not much");
-    } else if (playStatus <= 12.5) {
-      OscMessage myMessage = new OscMessage("tiny");
-      myMessage.add(2);
-      oscP5.send(myMessage, myRemoteLocation);
-      println("a bit");
-    } else if (playStatus <= 13.5) {
-      OscMessage myMessage = new OscMessage("some");
-      myMessage.add(3);
-      oscP5.send(myMessage, myRemoteLocation);
-      println("decent");
-    } else if (playStatus <= 14.5) {
-      OscMessage myMessage = new OscMessage("lots");
-      myMessage.add(4);
-      oscP5.send(myMessage, myRemoteLocation);
-      println("party");
-    } else {
-      println("errorrrorroroororrrorr");
-    }
+    // Normalize the total per-channel difference so downstream sketches can treat it as 0..1 motion energy.
+    float maxPresence = max(1.0, numPixels * 255.0);
+    normalizedMotion = presenceSum / maxPresence;
+    normalizedMotion = constrain(normalizedMotion, 0.0, 1.0);
+
+    OscMessage myMessage = new OscMessage("/motion");
+    myMessage.add(normalizedMotion);
+    oscP5.send(myMessage, myRemoteLocation);
+    println("motion " + nf(normalizedMotion, 1, 4));
   }
 }
 
