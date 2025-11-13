@@ -1,2 +1,0 @@
-# ExampleMappings
-Placeholder for demonstration.
