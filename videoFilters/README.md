@@ -23,11 +23,11 @@ A grab bag of webcam filter snippets for teaching pixel-level manipulation in Pr
    - Any other key – resets to the unfiltered feed.
 
 ## How it works
-- The sketch loops through every pixel on each draw, pulling values with `cam.get(i, j)` and writing back with `set(...)`. It’s not optimized, which makes it handy for discussing performance trade-offs.
+- The sketch leans into `loadPixels()`/`updatePixels()`, slurping the webcam frame into an `int[]` so we can mosh with pixels in-place without the legacy `cam.get()`/`set()` slog.
 - Each filter manipulates RGB channels differently, showing how simple arithmetic can produce stylized looks.
 - The `y` key toggles to HSB mode temporarily, illustrating how to juggle multiple color spaces in one frame.
 
 ## Remix it
-- Replace the nested loops with `loadPixels()`/`updatePixels()` for faster operations and show the speed difference.
+- Hack in easing between frames or tween between filter outputs so transitions feel less binary.
 - Add keyboard commands to blend between filters instead of switching abruptly.
 - Pipe the processed pixels into a `PGraphics` buffer so you can layer typography or UI on top.
