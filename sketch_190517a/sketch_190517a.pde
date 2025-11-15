@@ -14,6 +14,7 @@ void setup() {
   playSelection = "1.mov";
   size (720, 480);
   mov = new Movie(this, playSelection); //new video
+  mov.play();
   //  String portName = Serial.list()[0];
   //  myPort = new Serial(this, portName, 9600);
 }
@@ -30,7 +31,6 @@ void draw() {
 
 void videoplay() {
   //If (val == 0) {
-  mov.read();
   image(mov, 0, 0, width, height);
 
   if (mov.time() == mov.duration()) {
@@ -40,6 +40,10 @@ void videoplay() {
  run();
  }
  */
+
+void movieEvent(Movie m) {
+  m.read();
+}
 
 void videoSelect() {
   playSelection = nf(int(random(0, movTOTAL))) + ".mov";//randomized file selector

@@ -14,15 +14,16 @@ A random video jukebox that hints at how to integrate serial sensors for playlis
 ## Run it
 1. Add your clips to the `data/` folder using the numbering scheme above.
 2. Open `sketch_190517a.pde` in Processing and confirm the Video library is installed.
-3. In `setup()`, either call `mov.play();` after constructing the `Movie`, or change `mov = new Movie(...);` to `mov.loop();` so the first selection actually starts. The code currently forgets to start playback—a perfect debugging exercise.
-4. Run the sketch. When a movie reaches the end (`mov.time() == mov.duration()`), `videoSelect()` picks another random file.
+3. Fire up the sketch. `setup()` now kicks `mov.play()` immediately, so you should see video the moment the window appears—no more “why is this still frame blank?” angst.
+4. Let the clip finish. As soon as `mov.time()` catches `mov.duration()`, `videoSelect()` spins the wheel, loads the next `Movie`, and playback continues without a hiccup.
+5. Toss in a quick test clip (even a five-second color bar) to prove to yourself that playback jumps in immediately and keeps cycling.
 
 ## How it works
 - `playSelection` stores the filename. `videoSelect()` rebuilds the `Movie` object with a new random index using `nf(int(random(0, movTOTAL)))`.
 - Commented serial code shows how you could read bytes from `Serial` to trigger alternate playlists (e.g., `run()` vs. random mode).
-- Because `mov.read()` is called every frame without checking `movieEvent`, this sketch pushes you to learn about proper movie event handling.
+- The sketch now leans on Processing’s `movieEvent(Movie m)` callback to call `m.read()` only when fresh frames arrive, keeping playback smooth without burning cycles.
 
 ## Remix it
-- Implement `movieEvent(Movie m)` to keep the decoder happy, then gate playback on serial data or OSC.
+- Remix the `movieEvent(Movie m)` callback to inject glitch filters, OSC triggers, or other decoding hijinks before the frame hits the screen.
 - Replace the random selection with weighted choices or a Markov chain for curated playlists.
 - Display on-screen UI showing which clip is playing and how much time remains.
