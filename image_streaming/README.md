@@ -10,10 +10,17 @@ A trio of sketches that teach how to fling webcam frames across UDP—both in a 
 ## Folder layout
 ```
 image_streaming/
+├── shared/                  # Common Processing tabs (currently just FrameAssembler)
 ├── VideoSender/             # Captures webcam frames and broadcasts them
-├── VideoReceiver/           # Minimal blocking UDP receiver
-└── VideoReceiverThread/     # Receiver that runs networking on a separate thread
+├── VideoReceiver/           # Minimal blocking UDP receiver (symlinks FrameAssembler)
+└── VideoReceiverThread/     # Receiver with networking thread (symlinks FrameAssembler)
 ```
+
+### Why a shared tab?
+Both receivers depend on the exact same `FrameAssembler` class to stitch JPEG chunks back together. Instead of juggling two
+near-identical copies (and forgetting to patch one of them later), the sketches now point at
+`shared/FrameAssembler.pde`. Processing happily slurps any tab that lives beside the sketch folder, and the repo keeps a single
+canonical source of truth that you can tweak once and enjoy everywhere.
 
 ## Shared ingredients
 - **Libraries:** `processing.video` (for capture) plus Java’s built-in `java.net`, `java.io`, and `javax.imageio` packages.
