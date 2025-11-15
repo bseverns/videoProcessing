@@ -53,7 +53,7 @@ void setup() {
   int count = video.width * video.height;
   //println(count);
 
-  font = loadFont("Moospaced-48.vlw");
+  font = loadFont("Monospaced-48.vlw");
 
   // for the 256 levels of brightness, distribute the letters across
   // the an array of 256 elements to use for the lookup
@@ -145,15 +145,15 @@ void draw() {
   if (actualSecs % 60 == 0) {
     restartSecs = actualSecs;
   }
-  if ((cMins == 1)) { 
+  if ((cMins == 1)) {
     saveFrame("########.jpg");
     reset = true;
   }
-  if (reset = true) {
+  if (reset) {
     restartSecs = actualSecs;
     cSecs = startSec;
     restartMins = actualMins;
-    cMins = restartMins;
+    cMins = startMin;
     reset = false;
   }
 }
