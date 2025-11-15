@@ -10,6 +10,8 @@ int numPixels;
 int[] backgroundPixels;
 float presenceSum = 0.0;
 float normalizedMotion = 0.0;
+boolean backgroundReady = false;
+boolean liveBackground = true;
 
 //OSC
 OscP5 oscP5;
@@ -48,6 +50,11 @@ void draw() {
     println("one");
     image(video, 0, 0, 720, 480);//display the video for proper set up
 
+    if (!backgroundReady) {
+      arrayCopy(video.pixels, backgroundPixels);
+      backgroundReady = true;
+    }
+
     presenceSum = 0.0;
 
     for (int i = 0; i < numPixels; i++) { // For each pixel in the video frame...
@@ -80,6 +87,12 @@ void draw() {
     myMessage.add(normalizedMotion);
     oscP5.send(myMessage, myRemoteLocation);
     println("motion " + nf(normalizedMotion, 1, 4));
+
+    if (liveBackground) {
+      arrayCopy(video.pixels, backgroundPixels);
+    }
+
+    drawHud();
   }
 }
 
@@ -88,4 +101,36 @@ void oscEvent(OscMessage theOscMessage) {
   print("### received and osc message.");
   print(" addrpattern: "+theOscMessage.addrPattern());
   println(" typetag: "+theOscMessage.typetag());
+}
+
+void keyPressed() {
+  if (key == 'b' || key == 'B') {
+    liveBackground = !liveBackground;
+    if (!liveBackground) {
+      if (video != null && video.pixels != null && video.pixels.length == numPixels) {
+        arrayCopy(video.pixels, backgroundPixels);
+        backgroundReady = true;
+      }
+    }
+  }
+}
+
+void drawHud() {
+  pushStyle();
+  fill(0, 150);
+  noStroke();
+  rect(12, 12, 420, 120, 12);
+
+  fill(255);
+  textAlign(LEFT, TOP);
+  textSize(14);
+  String mode = liveBackground ? "LIVE" : "STATIC";
+  String motionLabel = "motion:" + nf(normalizedMotion, 1, 4);
+  text("/motion => " + motionLabel, 24, 24);
+  text("Background mode: " + mode, 24, 48);
+  text("Press 'b' to toggle live/static background", 24, 72);
+  if (!liveBackground) {
+    text("Press again after reframing to lock a new still", 24, 96);
+  }
+  popStyle();
 }
